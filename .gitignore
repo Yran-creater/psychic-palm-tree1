@@ -34,3 +34,8 @@ Release/
 # Other
 *.log
 *.tmp
+.vs/
+*.ipch
+*.pch
+bin/
+obj/
