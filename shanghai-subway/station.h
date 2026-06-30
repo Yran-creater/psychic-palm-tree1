@@ -57,12 +57,6 @@ public:
     void showClosedStations() const;
     void showInfoByLine(const std::string& line) const;
 
-    bool closeTransferStation(const std::string& name,
-        const std::string& operatorName = "user");
-    bool closeLine(const std::string& line,
-        const std::string& operatorName = "user");
-    bool closeAllNetwork(const std::string& operatorName = "user");
-    bool openAllNetwork(const std::string& operatorName = "user");
 
     void showUpdateHistory(int id) const;
     void showStatistics() const;

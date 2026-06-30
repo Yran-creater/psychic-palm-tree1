@@ -283,49 +283,6 @@ void StationManager::showInfoByLine(const std::string& line) const {
     else std::cout << "共 " << count << " 个站点" << std::endl;
 }
 
-bool StationManager::closeTransferStation(const std::string& name,
-    const std::string& operatorName) {
-    auto matches = findByNameAll(name);
-    if (matches.empty()) {
-        std::cerr << "[错误] 未找到换乘站: " << name << std::endl;
-        return false;
-    }
-    std::cout << "[信息] 关闭换乘站 [" << name << "] 全部 " << matches.size() << " 个节点" << std::endl;
-    for (auto* st : matches) updateStatus(st->id, StationStatus::CLOSED, operatorName, false);
-    saveToCSV("data/Station.csv");
-    return true;
-}
-
-bool StationManager::closeLine(const std::string& line,
-    const std::string& operatorName) {
-    auto list = findByLine(line);
-    if (list.empty()) {
-        std::cerr << "[错误] 未找到线路: " << line << std::endl;
-        return false;
-    }
-    std::cout << "[信息] 线路 [" << line << "] 停运，关闭 " << list.size() << " 个站点" << std::endl;
-    for (auto* st : list) updateStatus(st->id, StationStatus::CLOSED, operatorName, false);
-    saveToCSV("data/Station.csv");
-    return true;
-}
-
-bool StationManager::closeAllNetwork(const std::string& operatorName) {
-    std::cout << "[信息] 全网停运" << std::endl;
-    for (auto& st : stations) {
-        if (st.status != StationStatus::CLOSED) updateStatus(st.id, StationStatus::CLOSED, operatorName, false);
-    }
-    saveToCSV("data/Station.csv");
-    return true;
-}
-
-bool StationManager::openAllNetwork(const std::string& operatorName) {
-    std::cout << "[信息] 全网恢复运营" << std::endl;
-    for (auto& st : stations) {
-        if (st.status != StationStatus::OPEN) updateStatus(st.id, StationStatus::OPEN, operatorName, false);
-    }
-    saveToCSV("data/Station.csv");
-    return true;
-}
 
 void StationManager::showUpdateHistory(int id) const {
     std::ifstream file("data/update_station_status.csv");
