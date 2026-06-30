@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="shanghai-subway/shanghai-subway.vcxproj" Id="9577763b-1f85-404a-80bc-327d48323e1d" />
+</Solution>

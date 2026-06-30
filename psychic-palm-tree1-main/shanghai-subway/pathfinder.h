@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <string>
-#include <unordered_set>
 #include "graph.h"
 #include "station.h"
 
@@ -60,23 +59,18 @@ private:
     int calcActualStops(const std::vector<int>& nodes) const;
     std::vector<int> findTransferStations(const std::vector<int>& nodes) const;
     PathResult buildPathResult(const std::vector<int>& nodes) const;
-    std::vector<int> simplifyPath(const std::vector<int>& nodes) const;
-    bool isSameHub(int a, int b) const;
-    static bool isRunningLine(const std::string& line);
-    int transferIncrement(const std::string& curLine, const Edge& e) const;
-    bool isRedundantHubTransfer(int fromId, int toId, int prevNodeId,
-        const std::unordered_set<int>& blockedHubNodes, int goalToId = -1) const;
 
     PathResult dijkstraByTime(int fromId, int toId,
-        const std::vector<std::pair<int, int>>& bannedEdges = {},
-        const std::unordered_set<int>& blockedHubNodes = {}) const;
+        const std::vector<std::pair<int, int>>& bannedEdges = {}) const;
     PathResult dijkstraByTransfer(int fromId, int toId,
-        const std::vector<std::pair<int, int>>& bannedEdges = {},
-        const std::unordered_set<int>& blockedHubNodes = {}) const;
+        const std::vector<std::pair<int, int>>& bannedEdges = {}) const;
 
     enum class PathMetric { Time, Transfer };
 
-    std::vector<PathResult> yenKPaths(int fromId, int toId, int k, PathMetric metric) const;
+    std::vector<PathResult> yenKPaths(
+        int fromId, int toId, int k, PathMetric metric,
+        PathResult(PathFinder::*finder)(int, int,
+            const std::vector<std::pair<int, int>>&) const) const;
 
     bool isDuplicatePath(const std::vector<PathResult>& paths,
         const std::vector<int>& nodes) const;
