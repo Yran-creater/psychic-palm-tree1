@@ -183,123 +183,45 @@ class MetroService:
         st = self.stations.get(node_id)
         return st is not None and st.is_open
 
-    def _is_same_hub(self, a: int, b: int) -> bool:
-        if a == b:
-            return True
-        sa = self.stations.get(a)
-        sb = self.stations.get(b)
-        return sa is not None and sb is not None and sa.name == sb.name
-
-    def _is_running_line(self, line: str) -> bool:
-        return bool(line) and "换乘" not in line
-
-    def _transfer_increment(self, cur_line: str, edge: Edge) -> int:
-        if edge.is_transfer or not self._is_running_line(edge.line):
-            return 0
-        if self._is_running_line(cur_line) and cur_line != edge.line:
-            return 1
-        if cur_line and not self._is_running_line(cur_line):
-            return 1
-        return 0
-
-    def _is_redundant_hub_transfer(
-        self,
-        from_id: int,
-        to_id: int,
-        prev_node: Optional[int],
-        blocked_hub_nodes: Optional[set] = None,
-        goal_to_id: Optional[int] = None,
-    ) -> bool:
-        e = self.edge_map.get((from_id, to_id))
-        if not e or not e.is_transfer:
-            return False
-        from_st = self.stations.get(from_id)
-        to_st = self.stations.get(to_id)
-        if not from_st or not to_st or from_st.name != to_st.name:
-            return False
-        if prev_node is not None and to_id == prev_node:
-            return True
-        if blocked_hub_nodes and to_id in blocked_hub_nodes:
-            return True
-        if goal_to_id is not None and self._is_same_hub(from_id, goal_to_id) and self._is_same_hub(to_id, goal_to_id):
-            return True
-        return False
-
-    def _simplify_path(self, nodes: List[int]) -> List[int]:
-        path = list(nodes)
-        if len(path) < 3:
-            return path
-
-        changed = True
-        while changed:
-            changed = False
-            for i in range(len(path) - 2):
-                a, b, c = path[i], path[i + 1], path[i + 2]
-                e1 = self.edge_map.get((a, b))
-                e2 = self.edge_map.get((b, c))
-                if not e1 or not e2:
-                    continue
-                sa = self.stations.get(a)
-                sb = self.stations.get(b)
-                sc = self.stations.get(c)
-                if not sa or not sb or not sc:
-                    continue
-                if sa.name != sb.name or sb.name != sc.name:
-                    continue
-                if not e1.is_transfer or not e2.is_transfer:
-                    continue
-
-                if a == c:
-                    path = path[: i + 1] + path[i + 3 :]
-                    changed = True
-                    break
-
-                if (a, c) in self.edge_map:
-                    path = path[: i + 1] + path[i + 2 :]
-                    changed = True
-                    break
-        return path
-
     def _build_path_result(self, nodes: List[int]) -> PathResult:
-        simplified = self._simplify_path(nodes)
-        res = PathResult(nodes=simplified)
-        if not simplified:
+        res = PathResult(nodes=nodes)
+        if not nodes:
             return res
-        for i in range(len(simplified) - 1):
-            e = self.edge_map.get((simplified[i], simplified[i + 1]))
+        for i in range(len(nodes) - 1):
+            e = self.edge_map.get((nodes[i], nodes[i + 1]))
             if e:
                 res.total_time += e.travel_time
-        res.transfer_count = self._calc_transfers(simplified)
-        res.transfer_stations = self._find_transfer_stations(simplified)
-        res.actual_stop_count = len({self.stations[n].name for n in simplified if n in self.stations})
+        res.transfer_count = self._calc_transfers(nodes)
+        res.transfer_stations = self._find_transfer_stations(nodes)
+        res.actual_stop_count = len({self.stations[n].name for n in nodes if n in self.stations})
         return res
 
     def _calc_transfers(self, nodes: List[int]) -> int:
         if len(nodes) < 2:
             return 0
         transfers = 0
-        prev_run_line = ""
+        prev_line = ""
         for i in range(len(nodes) - 1):
             e = self.edge_map.get((nodes[i], nodes[i + 1]))
-            if not e or e.is_transfer:
+            if not e:
                 continue
-            if prev_run_line and prev_run_line != e.line:
+            if prev_line and prev_line != e.line:
                 transfers += 1
-            prev_run_line = e.line
+            prev_line = e.line
         return transfers
 
     def _find_transfer_stations(self, nodes: List[int]) -> List[int]:
         result: List[int] = []
         if len(nodes) < 2:
             return result
-        prev_run_line = ""
+        prev_line = ""
         for i in range(len(nodes) - 1):
             e = self.edge_map.get((nodes[i], nodes[i + 1]))
-            if not e or e.is_transfer:
+            if not e:
                 continue
-            if prev_run_line and prev_run_line != e.line:
+            if prev_line and prev_line != e.line:
                 result.append(nodes[i])
-            prev_run_line = e.line
+            prev_line = e.line
         return result
 
     def _dijkstra(
@@ -308,21 +230,19 @@ class MetroService:
         to_id: int,
         metric: str,
         banned: Optional[List[Tuple[int, int]]] = None,
-        blocked_hub_nodes: Optional[set] = None,
     ) -> PathResult:
         empty = PathResult()
         if not self._can_visit(from_id) or not self._can_visit(to_id):
             return empty
 
         banned_set = set(banned or [])
-        blocked_hub = blocked_hub_nodes or set()
         StateKey = Tuple[int, str]  # (node, line)
-        parent: Dict[StateKey, StateKey] = {}
-        parent_node: Dict[StateKey, int] = {}
-        best: Dict[StateKey, Tuple[float, float]] = {}
 
         def is_banned(u: int, v: int) -> bool:
             return (u, v) in banned_set
+
+        parent: Dict[StateKey, StateKey] = {}
+        best: Dict[StateKey, Tuple[float, float]] = {}
 
         start: StateKey = (from_id, "")
         if metric == "time":
@@ -340,7 +260,7 @@ class MetroService:
                 if b is None or b[0] < t - 1e-9 or (abs(b[0] - t) < 1e-9 and b[1] < tr):
                     continue
 
-                if self._is_same_hub(node, to_id):
+                if node == to_id:
                     if t < best_time - 1e-9 or (abs(t - best_time) < 1e-9 and tr < best_transfers):
                         best_time, best_transfers = t, tr
                         target = key
@@ -351,10 +271,7 @@ class MetroService:
                     e = self.edges[eidx]
                     if is_banned(e.from_id, e.to_id) or not self._can_visit(e.to_id):
                         continue
-                    prev_node = parent_node.get(key)
-                    if self._is_redundant_hub_transfer(node, e.to_id, prev_node, blocked_hub, to_id):
-                        continue
-                    new_tr = tr + self._transfer_increment(line, e)
+                    new_tr = tr + (1 if line and line != e.line else 0)
                     new_t = t + e.travel_time
                     nkey = (e.to_id, e.line)
                     nb = best.get(nkey)
@@ -365,7 +282,6 @@ class MetroService:
                             continue
                     best[nkey] = (new_t, new_tr)
                     parent[nkey] = key
-                    parent_node[nkey] = node
                     heapq.heappush(heap, (new_t, new_tr, e.to_id, e.line))
         else:
             best[start] = (0.0, 0.0)
@@ -382,7 +298,7 @@ class MetroService:
                 if b is None or b[0] < tr or (b[0] == tr and b[1] < t - 1e-9):
                     continue
 
-                if self._is_same_hub(node, to_id):
+                if node == to_id:
                     if tr < best_transfers or (tr == best_transfers and t < best_time - 1e-9):
                         best_transfers, best_time = tr, t
                         target = key
@@ -393,10 +309,7 @@ class MetroService:
                     e = self.edges[eidx]
                     if is_banned(e.from_id, e.to_id) or not self._can_visit(e.to_id):
                         continue
-                    prev_node = parent_node.get(key)
-                    if self._is_redundant_hub_transfer(node, e.to_id, prev_node, blocked_hub, to_id):
-                        continue
-                    new_tr = tr + self._transfer_increment(line, e)
+                    new_tr = tr + (1 if line and line != e.line else 0)
                     new_t = t + e.travel_time
                     nkey = (e.to_id, e.line)
                     nb = best.get(nkey)
@@ -407,7 +320,6 @@ class MetroService:
                             continue
                     best[nkey] = (new_tr, new_t)
                     parent[nkey] = key
-                    parent_node[nkey] = node
                     heapq.heappush(heap, (new_tr, new_t, e.to_id, e.line))
 
         if not found or target is None:
@@ -447,7 +359,7 @@ class MetroService:
         return False
 
     def k_paths(self, from_id: int, to_id: int, k: int, metric: str) -> List[PathResult]:
-        finder = lambda f, t, b, blocked=None: self._dijkstra(f, t, metric, b, blocked)
+        finder = lambda f, t, b: self._dijkstra(f, t, metric, b)
         results: List[PathResult] = []
         first = finder(from_id, to_id, [])
         if first.empty:
@@ -477,8 +389,7 @@ class MetroService:
                             banned.append((p.nodes[i], p.nodes[i + 1]))
                 for j in range(len(root_path) - 1):
                     banned.append((root_path[j], root_path[j + 1]))
-                blocked_hub = {nid for nid in root_path if nid != spur_node}
-                spur = finder(spur_node, to_id, banned, blocked_hub)
+                spur = finder(spur_node, to_id, banned)
                 if spur.empty:
                     continue
                 total = root_path + spur.nodes[1:]

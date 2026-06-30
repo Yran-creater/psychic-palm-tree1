@@ -68,12 +68,6 @@ void Menu::handlePathQuery(bool byTime, bool multiple) {
         std::cout << "[提示] 起点与终点相同" << std::endl;
         return;
     }
-    const Station* fromSt = stations_->findById(fromId);
-    const Station* toSt = stations_->findById(toId);
-    if (fromSt && toSt && fromSt->name == toSt->name) {
-        std::cout << "[提示] 起点与终点为同一站点（" << fromSt->name << "）" << std::endl;
-        return;
-    }
 
     if (byTime) {
         if (multiple) {

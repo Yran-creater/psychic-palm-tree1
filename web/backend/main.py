@@ -76,10 +76,6 @@ def reload_data():
 def find_path(body: PathRequest):
     if body.fromId == body.toId:
         raise HTTPException(400, "起点与终点不能相同")
-    from_st = metro.stations.get(body.fromId)
-    to_st = metro.stations.get(body.toId)
-    if from_st and to_st and from_st.name == to_st.name:
-        raise HTTPException(400, f"起点与终点为同一站点（{from_st.name}）")
 
     if body.mode == "time":
         paths = [metro.shortest_path(body.fromId, body.toId)]

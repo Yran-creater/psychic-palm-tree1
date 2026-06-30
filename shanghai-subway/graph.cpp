@@ -55,6 +55,16 @@ bool MetroGraph::loadEdgesFromCSV(const std::string& filename) {
             e.line = tokens[2];
             e.direction = (tokens[3] == kNone || tokens[3] == "none") ? "" : tokens[3];
             e.travelTime = std::stod(tokens[4]);
+            if (tokens[2] == "换乘") {
+                const Station* st = stationMgr->findById(e.toId);
+                if (st) {
+                    e.line = st->line;   // 设置为目标站点所属线路
+                }
+                else {
+                    std::cerr << "[警告] 换乘边目标站点 " << e.toId << " 不存在，跳过" << std::endl;
+                    continue;
+                }
+            }
             size_t idx = edges.size();
             edges.push_back(e);
             adjacencyList[e.fromId].push_back(idx);

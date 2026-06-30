@@ -16,86 +16,15 @@ bool PathFinder::canVisit(int nodeId) const {
     return stations_->isOpen(nodeId);
 }
 
-bool PathFinder::isSameHub(int a, int b) const {
-    if (a == b) return true;
-    const Station* sa = stations_->findById(a);
-    const Station* sb = stations_->findById(b);
-    return sa && sb && sa->name == sb->name;
-}
-
-bool PathFinder::isRunningLine(const std::string& line) {
-    return !line.empty() && line.find("\xe6\x8d\xa2\xe4\xb9\x98") == std::string::npos;
-}
-
-int PathFinder::transferIncrement(const std::string& curLine, const Edge& e) const {
-    if (e.isTransfer() || !isRunningLine(e.line)) return 0;
-    if (isRunningLine(curLine) && curLine != e.line) return 1;
-    if (!curLine.empty() && !isRunningLine(curLine)) return 1;
-    return 0;
-}
-
-bool PathFinder::isRedundantHubTransfer(int fromId, int toId, int prevNodeId,
-    const std::unordered_set<int>& blockedHubNodes, int goalToId) const {
-    const Edge* e = graph_->getEdge(fromId, toId);
-    if (!e || !e->isTransfer()) return false;
-
-    const Station* fromSt = stations_->findById(fromId);
-    const Station* toSt = stations_->findById(toId);
-    if (!fromSt || !toSt || fromSt->name != toSt->name) return false;
-
-    if (prevNodeId >= 0 && toId == prevNodeId) return true;
-    if (blockedHubNodes.count(toId)) return true;
-    // 已到达终点站（同名枢纽），无需再换到另一条线路的 ID
-    if (goalToId >= 0 && isSameHub(fromId, goalToId) && isSameHub(toId, goalToId)) return true;
-    return false;
-}
-
-std::vector<int> PathFinder::simplifyPath(const std::vector<int>& nodes) const {
-    std::vector<int> path = nodes;
-    if (path.size() < 3) return path;
-
-    bool changed = true;
-    while (changed) {
-        changed = false;
-        for (size_t i = 0; i + 2 < path.size(); ++i) {
-            int a = path[i], b = path[i + 1], c = path[i + 2];
-            const Edge* e1 = graph_->getEdge(a, b);
-            const Edge* e2 = graph_->getEdge(b, c);
-            if (!e1 || !e2) continue;
-
-            const Station* sa = stations_->findById(a);
-            const Station* sb = stations_->findById(b);
-            const Station* sc = stations_->findById(c);
-            if (!sa || !sb || !sc) continue;
-            if (sa->name != sb->name || sb->name != sc->name) continue;
-            if (!e1->isTransfer() || !e2->isTransfer()) continue;
-
-            if (a == c) {
-                path.erase(path.begin() + static_cast<std::ptrdiff_t>(i + 1),
-                    path.begin() + static_cast<std::ptrdiff_t>(i + 3));
-                changed = true;
-                break;
-            }
-
-            if (graph_->hasEdge(a, c)) {
-                path.erase(path.begin() + static_cast<std::ptrdiff_t>(i + 1));
-                changed = true;
-                break;
-            }
-        }
-    }
-    return path;
-}
-
 int PathFinder::calcTransfers(const std::vector<int>& nodes) const {
     if (nodes.size() < 2) return 0;
     int transfers = 0;
-    std::string prevRunLine;
+    std::string prevLine;
     for (size_t i = 0; i + 1 < nodes.size(); ++i) {
         const Edge* e = graph_->getEdge(nodes[i], nodes[i + 1]);
-        if (!e || e->isTransfer()) continue;
-        if (!prevRunLine.empty() && prevRunLine != e->line) transfers++;
-        prevRunLine = e->line;
+        if (!e) continue;
+        if (!prevLine.empty() && prevLine != e->line) transfers++;
+        prevLine = e->line;
     }
     return transfers;
 }
@@ -113,39 +42,37 @@ std::vector<int> PathFinder::findTransferStations(const std::vector<int>& nodes)
     std::vector<int> result;
     if (nodes.size() < 2) return result;
 
-    std::string prevRunLine;
+    std::string prevLine;
     for (size_t i = 0; i + 1 < nodes.size(); ++i) {
         const Edge* e = graph_->getEdge(nodes[i], nodes[i + 1]);
-        if (!e || e->isTransfer()) continue;
-        if (!prevRunLine.empty() && prevRunLine != e->line) {
+        if (!e) continue;
+        if (!prevLine.empty() && prevLine != e->line) {
             result.push_back(nodes[i]);
         }
-        prevRunLine = e->line;
+        prevLine = e->line;
     }
     return result;
 }
 
 PathResult PathFinder::buildPathResult(const std::vector<int>& nodes) const {
     PathResult res;
-    res.nodes = simplifyPath(nodes);
-    if (res.nodes.empty()) return res;
+    res.nodes = nodes;
+    if (nodes.empty()) return res;
 
-    for (size_t i = 0; i + 1 < res.nodes.size(); ++i) {
-        const Edge* e = graph_->getEdge(res.nodes[i], res.nodes[i + 1]);
+    for (size_t i = 0; i + 1 < nodes.size(); ++i) {
+        const Edge* e = graph_->getEdge(nodes[i], nodes[i + 1]);
         if (e) res.totalTime += e->travelTime;
     }
-    res.transferCount = calcTransfers(res.nodes);
-    res.transferStations = findTransferStations(res.nodes);
-    res.actualStopCount = calcActualStops(res.nodes);
+    res.transferCount = calcTransfers(nodes);
+    res.transferStations = findTransferStations(nodes);
+    res.actualStopCount = calcActualStops(nodes);
     return res;
 }
 
 PathResult PathFinder::dijkstraByTime(int fromId, int toId,
-    const std::vector<std::pair<int, int>>& bannedEdges,
-    const std::unordered_set<int>& blockedHubNodes) const {
+    const std::vector<std::pair<int, int>>& bannedEdges) const {
     PathResult empty;
     if (!canVisit(fromId) || !canVisit(toId)) return empty;
-
     auto isBanned = [&](int u, int v) {
         for (const auto& p : bannedEdges) {
             if (p.first == u && p.second == v) return true;
@@ -187,7 +114,7 @@ PathResult PathFinder::dijkstraByTime(int fromId, int toId,
             continue;
         }
 
-        if (isSameHub(cur.node, toId)) {
+        if (cur.node == toId) {
             if (cur.time < bestTime - 1e-9 ||
                 (std::abs(cur.time - bestTime) < 1e-9 && cur.transfers < bestTransfers)) {
                 bestTime = cur.time;
@@ -203,12 +130,8 @@ PathResult PathFinder::dijkstraByTime(int fromId, int toId,
             if (isBanned(e.fromId, e.toId)) continue;
             if (!canVisit(e.toId)) continue;
 
-            int prevNode = -1;
-            auto pnodeIt = parentNode.find(key);
-            if (pnodeIt != parentNode.end()) prevNode = pnodeIt->second;
-            if (isRedundantHubTransfer(cur.node, e.toId, prevNode, blockedHubNodes, toId)) continue;
-
-            int newTransfers = cur.transfers + transferIncrement(cur.line, e);
+            int newTransfers = cur.transfers;
+            if (!cur.line.empty() && cur.line != e.line) newTransfers++;
             double newTime = cur.time + e.travelTime;
 
             StateKey next{ e.toId, e.line };
@@ -241,8 +164,7 @@ PathResult PathFinder::dijkstraByTime(int fromId, int toId,
 }
 
 PathResult PathFinder::dijkstraByTransfer(int fromId, int toId,
-    const std::vector<std::pair<int, int>>& bannedEdges,
-    const std::unordered_set<int>& blockedHubNodes) const {
+    const std::vector<std::pair<int, int>>& bannedEdges) const {
     PathResult empty;
     if (!canVisit(fromId) || !canVisit(toId)) return empty;
 
@@ -267,7 +189,6 @@ PathResult PathFinder::dijkstraByTransfer(int fromId, int toId,
     std::priority_queue<PQNode, std::vector<PQNode>, std::greater<PQNode>> pq;
     std::unordered_map<StateKey, std::pair<int, double>, StateKeyHash> best;
     std::unordered_map<StateKey, StateKey, StateKeyHash> parent;
-    std::unordered_map<StateKey, int, StateKeyHash> parentNode;
 
     StateKey start{ fromId, "" };
     pq.push({ 0, 0.0, fromId, "" });
@@ -287,7 +208,7 @@ PathResult PathFinder::dijkstraByTransfer(int fromId, int toId,
             continue;
         }
 
-        if (isSameHub(cur.node, toId)) {
+        if (cur.node == toId) {
             if (cur.transfers < bestTransfers ||
                 (cur.transfers == bestTransfers && cur.time < bestTime - 1e-9)) {
                 bestTransfers = cur.transfers;
@@ -303,12 +224,8 @@ PathResult PathFinder::dijkstraByTransfer(int fromId, int toId,
             if (isBanned(e.fromId, e.toId)) continue;
             if (!canVisit(e.toId)) continue;
 
-            int prevNode = -1;
-            auto pnodeIt = parentNode.find(key);
-            if (pnodeIt != parentNode.end()) prevNode = pnodeIt->second;
-            if (isRedundantHubTransfer(cur.node, e.toId, prevNode, blockedHubNodes, toId)) continue;
-
-            int newTransfers = cur.transfers + transferIncrement(cur.line, e);
+            int newTransfers = cur.transfers;
+            if (!cur.line.empty() && cur.line != e.line) newTransfers++;
             double newTime = cur.time + e.travelTime;
 
             StateKey next{ e.toId, e.line };
@@ -320,7 +237,6 @@ PathResult PathFinder::dijkstraByTransfer(int fromId, int toId,
 
             best[next] = { newTransfers, newTime };
             parent[next] = key;
-            parentNode[next] = cur.node;
             pq.push({ newTransfers, newTime, e.toId, e.line });
         }
     }
@@ -359,27 +275,18 @@ std::vector<std::string> PathFinder::pathLineSequence(const std::vector<int>& no
 
 bool PathFinder::isDuplicatePath(const std::vector<PathResult>& paths,
     const std::vector<int>& nodes) const {
-    auto seq = pathLineSequence(nodes);
     for (const auto& p : paths) {
-        if (p.nodes == nodes) return true;
-        if (pathLineSequence(p.nodes) == seq && !seq.empty()) return true;
+        if (p.nodes == nodes) return true;   // 仅当站点序列完全一致时才判重复
     }
     return false;
 }
 
 std::vector<PathResult> PathFinder::yenKPaths(
-    int fromId, int toId, int k, PathMetric metric) const {
-    auto runDijkstra = [&](int from, int to,
-        const std::vector<std::pair<int, int>>& banned,
-        const std::unordered_set<int>& blockedHub) -> PathResult {
-        if (metric == PathMetric::Time) {
-            return dijkstraByTime(from, to, banned, blockedHub);
-        }
-        return dijkstraByTransfer(from, to, banned, blockedHub);
-    };
-
+    int fromId, int toId, int k, PathMetric metric,
+    PathResult(PathFinder::* finder)(int, int,
+        const std::vector<std::pair<int, int>>&) const) const {
     std::vector<PathResult> results;
-    PathResult first = runDijkstra(fromId, toId, {}, {});
+    PathResult first = (this->*finder)(fromId, toId, {});
     if (first.empty()) return results;
     results.push_back(first);
 
@@ -390,7 +297,7 @@ std::vector<PathResult> PathFinder::yenKPaths(
         }
         if (a.transferCount != b.transferCount) return a.transferCount < b.transferCount;
         return a.totalTime < b.totalTime;
-    };
+        };
 
     for (int ki = 1; ki < k; ++ki) {
         const PathResult& prev = results[ki - 1];
@@ -412,13 +319,12 @@ std::vector<PathResult> PathFinder::yenKPaths(
             for (size_t j = 0; j + 1 < rootPath.size(); ++j) {
                 banned.push_back({ rootPath[j], rootPath[j + 1] });
             }
-
-            std::unordered_set<int> blockedHub;
-            for (int nid : rootPath) {
-                if (nid != spurNode) blockedHub.insert(nid);
+            // 关键修正：禁止当前路径 spur 的下一条边
+            if (i + 1 < prev.nodes.size()) {
+                banned.push_back({ prev.nodes[i], prev.nodes[i + 1] });
             }
 
-            PathResult spur = runDijkstra(spurNode, toId, banned, blockedHub);
+            PathResult spur = (this->*finder)(spurNode, toId, banned);
             if (spur.empty()) continue;
 
             std::vector<int> totalPath = rootPath;
@@ -448,11 +354,11 @@ std::vector<PathResult> PathFinder::yenKPaths(
 }
 
 std::vector<PathResult> PathFinder::kShortestTimePaths(int fromId, int toId, int k) const {
-    return yenKPaths(fromId, toId, k, PathMetric::Time);
+    return yenKPaths(fromId, toId, k, PathMetric::Time, &PathFinder::dijkstraByTime);
 }
 
 std::vector<PathResult> PathFinder::kMinTransferPaths(int fromId, int toId, int k) const {
-    return yenKPaths(fromId, toId, k, PathMetric::Transfer);
+    return yenKPaths(fromId, toId, k, PathMetric::Transfer, &PathFinder::dijkstraByTransfer);
 }
 
 void PathFinder::displayPath(const PathResult& path) const {
