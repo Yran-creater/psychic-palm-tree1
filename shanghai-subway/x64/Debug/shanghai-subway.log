@@ -1,19 +1,7 @@
-﻿  MetroCrawler.cpp
-  源.cpp
+﻿  graph.cpp
   main.cpp
-C:\Users\Lenovo\Desktop\shanghai-subway\shanghai-subway\MetroCrawler.cpp(26,14): error C2039: "cout": 不是 "std" 的成员
-      D:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35503\include\unordered_map(23,1):
-      参见“std”的声明
-  
-C:\Users\Lenovo\Desktop\shanghai-subway\shanghai-subway\MetroCrawler.cpp(26,14): error C2065: “cout”: 未声明的标识符
-C:\Users\Lenovo\Desktop\shanghai-subway\shanghai-subway\MetroCrawler.cpp(29,48): error C2039: "endl": 不是 "std" 的成员
-      D:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.50.35503\include\unordered_map(23,1):
-      参见“std”的声明
-  
-C:\Users\Lenovo\Desktop\shanghai-subway\shanghai-subway\MetroCrawler.cpp(29,48): error C2065: “endl”: 未声明的标识符
-C:\Users\Lenovo\Desktop\shanghai-subway\shanghai-subway\main.cpp(2,10): error C1083: 无法打开包括文件: “MetroGraph.h”: No such file or directory
-  station.cpp
-  graph.cpp
   menu.cpp
   pathfinder.cpp
+  station.cpp
   正在生成代码...
+  shanghai-subway.vcxproj -> G:\DATA\shanghai_Subway\psychic-palm-tree1\x64\Debug\shanghai-subway.exe

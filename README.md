@@ -244,12 +244,37 @@ SetConsoleCP(65001);
 
 | 模块 | 状态 |
 |------|------|
-| 站点管理（StationManager） | ? 已完成 |
-| 有向图（MetroGraph） | ? 已完成 |
-| 数据爬虫（MetroCrawler） | ? 已完成（需配置依赖） |
-| 路径规划（Pathfinder） | ? 待实现 |
-| 交互菜单（Menu） | ? 待实现 |
-| 程序入口（main） | ? 待实现 |
+| 站点管理（StationManager） | 已完成 |
+| 有向图（MetroGraph） | 已完成 |
+| 路径规划（PathFinder） | 已完成 |
+| 交互菜单（Menu） | 已完成 |
+| 程序入口（main） | 已完成 |
+| 数据爬虫（MetroCrawler） | 已完成（可选，需 libcurl） |
+
+## 已实现功能对照
+
+### 路径规划
+- 最短时间 / K条时间最优 / 最少换乘 / K条换乘最优
+- 路径可视化（站点、线路、换乘、总时间、换乘次数、实际站数）
+- 起点/终点模糊搜索
+
+### 运营管理
+- 手工 / CSV 批量修改站点状态
+- 关闭换乘站、线路停运、全网停运/恢复
+- 从 Station_init.csv 恢复初始状态
+
+### 网络分析
+- 关闭站点受影响区域分析
+- 网络连通性分析
+
+## 运行说明
+
+1. 将课程完整 `Station.csv`（525 站）和 `Edge.csv`（1226 边）放入 `shanghai-subway/data/`
+2. 准备 `Station_init.csv` 和 `update_station_status.csv`
+3. Visual Studio 打开 `shanghai-subway.slnx`，`Debug | x64` 编译运行
+4. 工作目录设为 `shanghai-subway/`
+
+仓库内附带 9 站示例数据供调试；正式验收请替换为课程完整数据集。
 
 ## 许可证
 

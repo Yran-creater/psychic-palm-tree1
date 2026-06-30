@@ -1,14 +1,15 @@
-﻿#include "graph.h"
+from pathlib import Path
+
+content = r'''#include "graph.h"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <iostream>
 
-static const char kTransfer[] = "\xe6\x8d\xa2\xe4\xb9\x98";
-static const char kLine4[] = "4\xe5\x8f\xb7\xe7\xba\xbf";
-static const char kNone[] = "\xe6\x97\xa0";
-static const char kEdgeHeader[] = "\xe8\xb5\xb7\xe7\x82\xb9\xe7\xab\x99ID,\xe7\xbb\x88\xe7\x82\xb9\xe7\xab\x99ID,\xe6\x89\x80\xe5\xb1\x9e\xe7\xba\xbf\xe8\xb7\xaf,\xe8\xbf\x90\xe8\xa1\x8c\xe6\x96\xb9\xe5\x90\x91,\xe8\xbf\x90\xe8\xa1\x8c\xe6\x97\xb6\xe9\x97\xb4\n";
+static const char* kTransfer = u8"\xe6\x8d\xa2\xe4\xb9\x98";
+static const char* kLine4 = u8"4\xe5\x8f\xb7\xe7\xba\xbf";
+static const char* kNone = u8"\xe6\x97\xa0";
 
 bool Edge::isTransfer() const { return line.find(kTransfer) != std::string::npos; }
 
@@ -70,7 +71,7 @@ bool MetroGraph::saveEdgesToCSV(const std::string& filename) const {
     std::ofstream file(filename, std::ios::out | std::ios::trunc);
     if (!file.is_open()) return false;
     file << "\xEF\xBB\xBF";
-    file << kEdgeHeader;
+    file << u8"\xe8\xb5\xb7\xe7\x82\xb9\xe7\xab\x99ID,\xe7\xbb\x88\xe7\x82\xb9\xe7\xab\x99ID,\xe6\x89\x80\xe5\xb1\x9e\xe7\xba\xbf\xe8\xb7\xaf,\xe8\xbf\x90\xe8\xa1\x8c\xe6\x96\xb9\xe5\x90\x91,\xe8\xbf\x90\xe8\xa1\x8c\xe6\x97\xb6\xe9\x97\xb4\n";
     for (const auto& e : edges) {
         file << e.fromId << "," << e.toId << "," << e.line << ","
             << (e.direction.empty() ? kNone : e.direction) << ","
@@ -195,3 +196,7 @@ void MetroGraph::displayAdjacencyList() const {
 void MetroGraph::displayLine4Info() const {
     std::cout << "Line4 edges: " << getEdgesOnLine4().size() << std::endl;
 }
+'''
+
+Path(r'g:\DATA\shanghai_Subway\psychic-palm-tree1\shanghai-subway\graph.cpp').write_text(content, encoding='utf-8-sig')
+print('ok')

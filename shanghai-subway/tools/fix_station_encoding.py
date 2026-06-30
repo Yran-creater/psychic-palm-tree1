@@ -1,4 +1,9 @@
-﻿#pragma once
+# -*- coding: utf-8 -*-
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+station_h = '''#pragma once
 
 #include <string>
 #include <vector>
@@ -6,8 +11,8 @@
 #include <iostream>
 
 namespace StationStatus {
-    inline const char* OPEN = "\xe5\xbc\x80\xe5\x90\xaf";
-    inline const char* CLOSED = "\xe5\x85\xb3\xe9\x97\xad";
+    inline const char* OPEN = "\\xe5\\xbc\\x80\\xe5\\x90\\xaf";
+    inline const char* CLOSED = "\\xe5\\x85\\xb3\\xe9\\x97\\xad";
 }
 
 struct Station {
@@ -79,3 +84,7 @@ private:
         const std::string& operatorName) const;
     void ensureHistoryFile() const;
 };
+'''
+
+(ROOT / 'station.h').write_text(station_h, encoding='utf-8-sig')
+print('fixed station.h')
