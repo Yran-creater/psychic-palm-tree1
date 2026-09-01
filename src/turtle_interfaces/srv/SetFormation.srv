@@ -1,0 +1,8 @@
+string formation_type  # 阵型类型：line（一字型）/ triangle（三角型）
+
+
+---
+
+
+bool success           # 服务调用结果
+string message         # 状态提示
